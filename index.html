@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acompanhamento de Propostas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+:root{--green-dark:#1a6b3a;--green-main:#2d8c52;--green-light:#e8f5ee;--green-btn:#22a45d;--white:#fff;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a;--shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.10);--radius:10px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#f0f4f1;color:var(--gray-900);min-height:100vh}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f2d1a 0%,#1a6b3a 60%,#2d8c52 100%)}
+.login-box{background:#fff;border-radius:20px;padding:44px 40px;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,.25)}
+.login-logo{width:56px;height:56px;background:var(--green-light);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 20px}
+.login-title{font-size:22px;font-weight:700;color:var(--gray-900);text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--gray-500);text-align:center;margin-bottom:28px}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:6px;letter-spacing:.3px;text-transform:uppercase}
+.login-field input{width:100%;border:2px solid var(--gray-200);border-radius:10px;padding:11px 14px;font-size:14px;font-family:'DM Sans',sans-serif;color:var(--gray-900);transition:all .2s;background:#fff}
+.login-field input:focus{outline:none;border-color:var(--green-main);box-shadow:0 0 0 3px rgba(34,164,93,.1)}
+.login-field input.error{border-color:#f87171;box-shadow:0 0 0 3px rgba(248,113,113,.1)}
+.login-btn{width:100%;background:var(--green-btn);color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s;margin-top:8px}
+.login-btn:hover{background:#1a8a4a}
+.login-btn:disabled{background:var(--gray-300);cursor:not-allowed}
+.login-error{background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.login-hint{font-size:12px;color:var(--gray-500);text-align:center;margin-top:16px}
+.login-hint b{color:var(--green-dark)}
+
+/* primeiro acesso */
+.primeiro-acesso-badge{background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:13px;color:#92400e;margin-bottom:16px;display:none}
+.senha-rules{font-size:11px;color:var(--gray-500);margin-top:4px}
+
+/* ── HEADER ── */
+header{background:var(--green-dark);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+header h1{color:#fff;font-size:18px;font-weight:600;letter-spacing:-.3px}
+header #header-date{font-size:12px;color:rgba(255,255,255,.55);display:block}
+.header-right{display:flex;align-items:center;gap:16px}
+.user-pill{background:rgba(255,255,255,.15);border-radius:20px;padding:5px 14px;font-size:13px;color:#fff;display:flex;align-items:center;gap:8px}
+.user-role{font-size:10px;background:rgba(255,255,255,.2);border-radius:10px;padding:1px 7px;text-transform:uppercase;letter-spacing:.5px}
+.btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-logout:hover{background:rgba(255,255,255,.2);color:#fff}
+
+/* ── MAIN ── */
+main{padding:24px 28px;max-width:1700px;margin:0 auto}
+.upload-panel{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
+.upload-card{background:var(--white);border-radius:var(--radius);border:2px dashed var(--gray-200);padding:18px 22px;flex:1;min-width:220px;cursor:pointer;transition:all .2s;position:relative}
+.upload-card:hover,.upload-card.active{border-color:var(--green-main);background:var(--green-light)}
+.upload-card input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-action{border-style:solid;border-color:var(--green-main)}
+.upload-icon{font-size:26px;margin-bottom:8px;display:block}
+.upload-card h3{font-size:14px;font-weight:600;color:var(--gray-900);margin-bottom:4px}
+.upload-card p{font-size:12px;color:var(--gray-500)}
+.file-hint{margin-top:8px;font-size:11px;color:var(--green-main);font-weight:500;background:rgba(34,164,93,.1);display:inline-block;padding:2px 8px;border-radius:20px}
+.upload-status{margin-top:8px;font-size:12px;font-weight:600;color:var(--green-dark)}
+.admin-only{display:none}
+
+.filters-bar{background:var(--white);border-radius:var(--radius);padding:12px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px;box-shadow:var(--shadow-sm);flex-wrap:wrap}
+.filter-label{font-size:13px;font-weight:600;color:var(--gray-700);white-space:nowrap}
+.filter-btn{border:2px solid var(--gray-200);background:var(--white);border-radius:8px;padding:5px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px}
+.filter-btn.all.active{background:var(--green-btn);color:#fff;border-color:var(--green-btn)}
+.filter-btn.approved.active{background:#dcfce7;border-color:#4ade80;color:#166534}
+.filter-btn.rejected.active{background:#fee2e2;border-color:#f87171;color:#991b1b}
+.filter-btn.included.active{background:#fef9c3;border-color:#facc15;color:#713f12}
+.filter-btn.filial.active{background:#1a3a5c;border-color:#1a3a5c;color:#fff}
+.filter-btn:not(.active):hover{border-color:var(--gray-300);background:var(--gray-50)}
+.filter-divider{width:1px;height:26px;background:var(--gray-200)}
+.filter-select{border:2px solid var(--gray-200);background:var(--white);border-radius:8px;padding:5px 12px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--gray-700);cursor:pointer;min-width:180px}
+.filter-select:focus{outline:none;border-color:var(--green-main)}
+.stats-pills{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.pill{padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.pill-total{background:var(--gray-100);color:var(--gray-700)}
+.pill-ok{background:#dcfce7;color:#166534}
+.pill-no{background:#fee2e2;color:#991b1b}
+.pill-sem{background:#fef3c7;color:#92400e}
+
+.table-wrapper{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow-md);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--green-dark);position:sticky;top:0;z-index:10}
+thead th{color:#fff;padding:12px 13px;text-align:left;font-weight:600;font-size:12px;letter-spacing:.3px;white-space:nowrap;cursor:pointer;user-select:none;transition:background .15s}
+thead th:hover{background:rgba(255,255,255,.1)}
+.sort-icon{opacity:.4;margin-left:3px;font-size:10px}
+tbody tr{border-bottom:1px solid var(--gray-100);transition:filter .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{filter:brightness(.97)}
+tbody tr.row-approved{background:#fff}
+tbody tr.row-rejected{background:#fff5f5;border-left:3px solid #f87171}
+tbody tr.row-included{background:#fffdf0;border-left:3px solid #facc15}
+tbody td{padding:10px 13px;color:var(--gray-700);vertical-align:middle}
+td.col-name{font-weight:600;color:var(--gray-900)}
+td.col-proposta{font-family:'DM Mono',monospace;font-size:12px;color:var(--gray-500)}
+td.col-data{font-size:12px;white-space:nowrap;color:var(--gray-500)}
+td.col-dn{font-family:'DM Mono',monospace;font-size:12px}
+td.col-loja{color:var(--green-dark);font-weight:500;max-width:220px}
+td.col-gcm,td.col-coord{font-size:12px;color:#475569}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-approved{background:#dcfce7;color:#166534}
+.badge-rejected{background:#fee2e2;color:#991b1b}
+.badge-included{background:#fef9c3;color:#713f12}
+.obs-input{width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:5px 9px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--gray-700);background:var(--gray-50);transition:all .2s;resize:none;min-width:160px}
+.obs-input:focus{outline:none;border-color:var(--green-main);background:#fff;box-shadow:0 0 0 3px rgba(34,164,93,.1)}
+.obs-input::placeholder{color:#b0bec5}
+.btn-pgto{background:none;border:2px solid var(--gray-200);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:15px;transition:all .2s;display:flex;align-items:center;justify-content:center;width:36px;height:32px}
+.btn-pgto:hover{border-color:var(--green-main);background:var(--green-light)}
+.btn-pgto.paid{border-color:var(--green-btn);background:#dcfce7}
+
+#save-bar{position:fixed;bottom:20px;right:24px;background:var(--green-dark);color:#fff;border-radius:12px;padding:12px 20px;box-shadow:0 8px 32px rgba(0,0,0,.2);display:flex;align-items:center;gap:10px;z-index:100;transform:translateY(80px);transition:transform .3s ease;font-size:13px;font-weight:500}
+#save-bar.visible{transform:translateY(0)}
+#save-bar button{background:var(--green-btn);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s}
+#save-bar button:hover{background:#1a8a4a}
+.empty-state{text-align:center;padding:56px 20px;color:var(--gray-500)}
+.empty-icon{font-size:44px;margin-bottom:12px}
+.empty-state h3{font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:6px}
+.empty-state p{font-size:13px}
+#toast{position:fixed;bottom:76px;right:24px;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow-md);z-index:200;transform:translateY(16px);opacity:0;transition:all .25s;pointer-events:none;font-family:'DM Sans',sans-serif}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{background:#166534;color:#fff}
+#toast.error{background:#991b1b;color:#fff}
+#toast.info{background:#1e40af;color:#fff}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:3px}
+@media(max-width:768px){main{padding:14px}header{padding:12px 16px}.upload-panel{flex-direction:column}.stats-pills{width:100%}}
+</style>
+</head>
+<body>
+
+<!-- ═══ TELA DE LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">📊</div>
+    <div class="login-title">Acompanhamento de Propostas</div>
+    <div class="login-sub" id="login-sub">Entre com seu nome e senha para acessar</div>
+
+    <div class="login-error" id="login-error"></div>
+    <div class="primeiro-acesso-badge" id="primeiro-acesso-badge">
+      🔐 <b>Primeiro acesso!</b> Crie uma nova senha para continuar.
+    </div>
+
+    <div class="login-field">
+      <label>Seu nome (GCM ou Coordenador)</label>
+      <input type="text" id="inp-nome" placeholder="Ex: MARCOS ALEXANDRE CUSTODIO" autocomplete="username"
+        oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')Auth.login()">
+    </div>
+    <div class="login-field">
+      <label id="label-senha">Senha</label>
+      <input type="password" id="inp-senha" placeholder="Digite sua senha" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')Auth.login()">
+    </div>
+
+    <!-- campos visíveis só no primeiro acesso -->
+    <div id="campos-nova-senha" style="display:none">
+      <div class="login-field">
+        <label>Nova senha</label>
+        <input type="password" id="inp-nova" placeholder="Mínimo 6 caracteres">
+        <div class="senha-rules">Mínimo 6 caracteres</div>
+      </div>
+      <div class="login-field">
+        <label>Confirmar nova senha</label>
+        <input type="password" id="inp-confirma" placeholder="Repita a nova senha"
+          onkeydown="if(event.key==='Enter')Auth.login()">
+      </div>
+    </div>
+
+    <button class="login-btn" id="btn-login" onclick="Auth.login()">Entrar</button>
+    <div class="login-hint" id="login-hint">Primeiro acesso? Use seu <b>nome completo</b> como senha inicial.</div>
+  </div>
+</div>
+
+<!-- ═══ APP (oculto até login) ═══ -->
+<div id="app-screen" style="display:none">
+
+<header>
+  <div class="header-left">
+    <div class="logo">📊</div>
+    <div>
+      <h1>Acompanhamento de Propostas</h1>
+      <span id="header-date"></span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="user-pill">
+      <span id="user-nome-display"></span>
+      <span class="user-role" id="user-role-display"></span>
+    </div>
+    <button class="btn-logout" onclick="Auth.logout()">Sair</button>
+  </div>
+</header>
+
+<main>
+  <div class="upload-panel">
+
+    <!-- Upload lojas — só coordenador/admin vê -->
+    <div class="upload-card admin-only" id="card-lojas">
+      <input type="file" id="file-lojas" accept=".xlsx,.xls,.csv" onchange="App.handleUploadLojas(event)">
+      <span class="upload-icon">🏪</span>
+      <h3>Lojas &amp; Colaboradores</h3>
+      <p>Planilha com DN, Loja, GCM e Coordenador</p>
+      <span class="file-hint">.xlsx · .xls · .csv</span>
+      <div class="upload-status" id="status-lojas"></div>
+    </div>
+
+    <!-- Upload propostas — só coordenador/admin vê -->
+    <div class="upload-card admin-only" id="card-propostas">
+      <input type="file" id="file-propostas" accept=".xlsx,.xls,.csv" onchange="App.handleUploadPropostas(event)">
+      <span class="upload-icon">📄</span>
+      <h3>Relatório de Propostas</h3>
+      <p>CSV/Excel exportado do sistema de propostas</p>
+      <span class="file-hint">.csv · .xlsx · .xls</span>
+      <div class="upload-status" id="status-propostas"></div>
+    </div>
+
+    <div class="upload-card upload-action" onclick="App.recarregarBanco()">
+      <span class="upload-icon">🔄</span>
+      <h3>Recarregar</h3>
+      <p>Buscar dados atualizados do banco</p>
+      <span class="file-hint">Sincronizar agora</span>
+    </div>
+
+    <div class="upload-card upload-action" onclick="App.exportCSV()">
+      <span class="upload-icon">⬇️</span>
+      <h3>Exportar CSV</h3>
+      <p>Baixar a tabela com filtros aplicados</p>
+      <span class="file-hint">Formato UTF-8</span>
+    </div>
+
+  </div>
+
+  <div class="filters-bar">
+    <span class="filter-label">Status:</span>
+    <button class="filter-btn all active" onclick="App.setFilter('all')">Todas</button>
+    <button class="filter-btn approved" onclick="App.setFilter('Aprovada')">✅ Aprovadas</button>
+    <button class="filter-btn rejected" onclick="App.setFilter('Recusada')">❌ Recusadas</button>
+    <button class="filter-btn included" onclick="App.setFilter('Incluida')">🕐 Incluídas</button>
+    <button class="filter-btn filial" onclick="App.toggleFilial(this)">🏢 Só minha filial</button>
+    <div class="filter-divider"></div>
+    <span class="filter-label">GCM:</span>
+    <select class="filter-select" id="gcm-select" onchange="App.renderTable()"><option value="">Todos</option></select>
+    <span class="filter-label">Coordenador:</span>
+    <select class="filter-select" id="coord-select" onchange="App.renderTable()"><option value="">Todos</option></select>
+    <div class="stats-pills">
+      <span class="pill pill-total" id="pill-total">0 total</span>
+      <span class="pill pill-ok"    id="pill-ok">0 aprov.</span>
+      <span class="pill pill-no"    id="pill-no">0 recus.</span>
+      <span class="pill pill-sem"   id="pill-sem">0 sem vínculo</span>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th onclick="App.sortBy('VENDEDOR')">Nome (C) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('PROPOSTA')">Proposta (G) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('DATA_INCLUSAO')">Data (I) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('STATUS')">Status (V) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('DN')">DN (F) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('LOJA')">Loja (PROCV) <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('GCM')">GCM <span class="sort-icon">⇅</span></th>
+          <th onclick="App.sortBy('COORDENADOR')">Coordenador <span class="sort-icon">⇅</span></th>
+          <th>Observação</th>
+          <th>Pgto</th>
+        </tr>
+      </thead>
+      <tbody id="table-body">
+        <tr><td colspan="10">
+          <div class="empty-state"><div class="empty-icon">📂</div>
+            <h3>Carregando propostas...</h3><p>Aguarde a sincronização com o banco</p>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div id="save-bar">
+  <span>💾 Há alterações não salvas</span>
+  <button onclick="App.saveToSupabase()">Salvar no Supabase</button>
+</div>
+
+</div><!-- fim #app-screen -->
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════
+//  CONFIGURAÇÃO
+// ════════════════════════════════════════════════
+const SB_URL = 'https://zlixbblynxzugxtfxjjc.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpsaXhiYmx5bnh6dWd4dGZ4ampjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxMTM4NzMsImV4cCI6MjA4OTY4OTg3M30.2Gcg-Mw_a7AGzl8kEoDsud7l8tEQszMS5mLZXtQ7rGQ';
+
+const SB = {
+  get: (path) => fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':`Bearer ${SB_KEY}`,
+      'Range':'0-49999',
+      'Prefer':'count=none',
+    }
+  }).then(r=>r.json()),
+  post: (path, body, prefer='') => fetch(`${SB_URL}/rest/v1/${path}`, {
+    method:'POST',
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':`Bearer ${SB_KEY}`,
+      'Content-Type':'application/json',
+      'Prefer':prefer||'return=minimal',
+    },
+    body:JSON.stringify(body)
+  }),
+  patch: (path, body) => fetch(`${SB_URL}/rest/v1/${path}`, {
+    method:'PATCH',
+    headers:{
+      'apikey':SB_KEY,
+      'Authorization':`Bearer ${SB_KEY}`,
+      'Content-Type':'application/json',
+      'Prefer':'return=minimal',
+    },
+    body:JSON.stringify(body)
+  }),
+};
+
+// ════════════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════════════
+const Auth = (() => {
+  let _user = null; // { nome, role, coordenador }
+  let _primeiroAcesso = false;
+
+  async function _sha256(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function login() {
+    const nome   = document.getElementById('inp-nome').value.trim().toUpperCase();
+    const senha  = document.getElementById('inp-senha').value;
+    const errEl  = document.getElementById('login-error');
+    const btn    = document.getElementById('btn-login');
+
+    errEl.style.display='none';
+    if (!nome || !senha) { _showErr('Preencha o nome e a senha.'); return; }
+
+    btn.disabled=true; btn.textContent='Verificando...';
+
+    try {
+      // Busca usuário no banco
+      const rows = await SB.get(`usuarios?nome=eq.${encodeURIComponent(nome)}&select=*`);
+
+      // Usuário não existe — verifica se o nome é um GCM ou Coordenador válido
+      if (!rows || rows.length === 0) {
+        const valido = await _verificarNomeValido(nome);
+        if (!valido) { _showErr('Nome não encontrado. Use seu nome completo como aparece no sistema.'); btn.disabled=false;btn.textContent='Entrar'; return; }
+        // Primeiro acesso — senha deve ser igual ao nome
+        if (senha.toUpperCase() !== nome) {
+          _showErr('Senha incorreta. No primeiro acesso, a senha é o seu nome completo.'); btn.disabled=false;btn.textContent='Entrar'; return;
+        }
+        // Mostra campos de nova senha
+        if (!_primeiroAcesso) {
+          _primeiroAcesso = true;
+          document.getElementById('campos-nova-senha').style.display='block';
+          document.getElementById('primeiro-acesso-badge').style.display='block';
+          document.getElementById('login-hint').style.display='none';
+          document.getElementById('label-senha').textContent='Senha atual (seu nome)';
+          btn.disabled=false; btn.textContent='Confirmar nova senha';
+          showToast('Defina uma nova senha para continuar','info'); return;
+        }
+        // Valida nova senha
+        const nova     = document.getElementById('inp-nova').value;
+        const confirma = document.getElementById('inp-confirma').value;
+        if (nova.length < 6) { _showErr('A nova senha deve ter pelo menos 6 caracteres.'); btn.disabled=false;btn.textContent='Confirmar nova senha'; return; }
+        if (nova !== confirma) { _showErr('As senhas não coincidem.'); btn.disabled=false;btn.textContent='Confirmar nova senha'; return; }
+        // Descobre o papel (GCM ou Coordenador)
+        const role = await _descobrirRole(nome);
+        const hash = await _sha256(nova);
+        await SB.post('usuarios', {nome, senha_hash:hash, role, primeiro_acesso:false}, 'return=minimal');
+        _user = {nome, role};
+        _entrar();
+      } else {
+        // Usuário existe
+        const u = rows[0];
+        if (u.primeiro_acesso) {
+          // Ainda não trocou a senha
+          if (senha.toUpperCase() !== nome) { _showErr('No primeiro acesso, use seu nome completo como senha.'); btn.disabled=false;btn.textContent='Entrar'; return; }
+          if (!_primeiroAcesso) {
+            _primeiroAcesso=true;
+            document.getElementById('campos-nova-senha').style.display='block';
+            document.getElementById('primeiro-acesso-badge').style.display='block';
+            document.getElementById('login-hint').style.display='none';
+            document.getElementById('label-senha').textContent='Senha atual (seu nome)';
+            btn.disabled=false; btn.textContent='Confirmar nova senha'; return;
+          }
+          const nova=document.getElementById('inp-nova').value;
+          const confirma=document.getElementById('inp-confirma').value;
+          if (nova.length<6){_showErr('Mínimo 6 caracteres.');btn.disabled=false;btn.textContent='Confirmar nova senha';return;}
+          if (nova!==confirma){_showErr('As senhas não coincidem.');btn.disabled=false;btn.textContent='Confirmar nova senha';return;}
+          const hash=await _sha256(nova);
+          await SB.patch(`usuarios?nome=eq.${encodeURIComponent(nome)}`,{senha_hash:hash,primeiro_acesso:false});
+          _user={nome,role:u.role};
+          _entrar();
+        } else {
+          // Login normal
+          const hash=await _sha256(senha);
+          if (hash!==u.senha_hash){_showErr('Senha incorreta.');btn.disabled=false;btn.textContent='Entrar';return;}
+          _user={nome,role:u.role};
+          _entrar();
+        }
+      }
+    } catch(e) {
+      _showErr('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    }
+  }
+
+  async function _verificarNomeValido(nome) {
+    // Verifica se existe como GCM ou Coordenador em alguma proposta ou loja
+    const r1 = await SB.get(`propostas?gcm=eq.${encodeURIComponent(nome)}&select=gcm&limit=1`);
+    if (r1&&r1.length>0) return true;
+    const r2 = await SB.get(`propostas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
+    if (r2&&r2.length>0) return true;
+    return false;
+  }
+
+  async function _descobrirRole(nome) {
+    // Se aparece como coordenador → role = coordenador, senão → gcm
+    const r = await SB.get(`propostas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
+    return (r&&r.length>0) ? 'coordenador' : 'gcm';
+  }
+
+  function _entrar() {
+    sessionStorage.setItem('usuario', JSON.stringify(_user));
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='block';
+    document.getElementById('user-nome-display').textContent=_user.nome.split(' ')[0];
+    document.getElementById('user-role-display').textContent=_user.role==='coordenador'?'Coordenador':'GCM';
+    document.getElementById('header-date').textContent=
+      new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+    // Mostra uploads só para coordenador
+    if (_user.role==='coordenador') {
+      document.querySelectorAll('.admin-only').forEach(el=>el.style.display='block');
+    }
+    App.init(_user);
+  }
+
+  function logout() {
+    sessionStorage.removeItem('usuario');
+    location.reload();
+  }
+
+  function getUser() { return _user; }
+
+  function _showErr(msg) {
+    const el=document.getElementById('login-error');
+    el.textContent=msg; el.style.display='block';
+  }
+
+  // Verifica sessão salva
+  function checkSession() {
+    const s=sessionStorage.getItem('usuario');
+    if (s) { try{ _user=JSON.parse(s); _entrar(); return true; }catch(e){} }
+    return false;
+  }
+
+  return {login, logout, getUser, checkSession};
+})();
+
+// ════════════════════════════════════════════════
+//  APP
+// ════════════════════════════════════════════════
+const App = (() => {
+  let lojas={}, propostas=[], currentFilter='all', sortField='DATA_INCLUSAO', sortDir=-1, somenteFilial=false;
+  let _user=null;
+  let _debounceTimer=null;
+
+  function init(user) {
+    _user=user;
+    const cl=localStorage.getItem('lojas_data');
+    if(cl){try{lojas=JSON.parse(cl);}catch(e){}}
+    _carregarDoSupabase();
+  }
+
+  async function _carregarDoSupabase(){
+    const el=document.getElementById('status-propostas');
+    if(el)el.textContent='⏳ Carregando do banco...';
+    try{
+      let query='propostas?select=*&order=data_inclusao.desc&limit=50000';
+      if(_user.role==='gcm'){
+        query=`propostas?gcm=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      } else if(_user.role==='coordenador'){
+        query=`propostas?coordenador=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      }
+      const data=await SB.get(query);
+      // Trata erro retornado pelo Supabase como objeto JSON
+      if(!Array.isArray(data)){
+        throw new Error(data.message||data.hint||JSON.stringify(data));
+      }
+      if(data.length>0){
+        propostas=data.map(r=>({
+          ID_PROPOSTA:  r.id_proposta||'',
+          VENDEDOR:     r.vendedor||'',
+          PROPOSTA:     r.proposta||'',
+          DATA_INCLUSAO:r.data_inclusao||'',
+          DN:           r.dn||'',
+          LOJA:         r.loja||'',
+          GCM:          r.gcm||'',
+          COORDENADOR:  r.coordenador||'',
+          STATUS:       r.status||'',
+          _obs:         r.observacao||'',
+          _pgto:        r.pgto||false,
+          _sb_id:       r.id,
+        }));
+        localStorage.setItem('propostas_data',JSON.stringify(propostas));
+        if(el)el.textContent=`✅ ${propostas.length} propostas`;
+        _refreshSelects(); renderTable();
+        showToast(`${propostas.length} propostas carregadas`,'success');
+      } else {
+        // Banco vazio para esse usuário
+        propostas=[];
+        if(el)el.textContent='Nenhuma proposta no banco ainda';
+        renderTable();
+        showToast('Nenhuma proposta encontrada para o seu perfil','info');
+      }
+    }catch(e){
+      console.error('Erro ao carregar Supabase:',e);
+      // Fallback para cache local
+      const cp=localStorage.getItem('propostas_data');
+      if(cp){
+        try{propostas=JSON.parse(cp);}catch(_){}
+        _refreshSelects(); renderTable();
+        if(el)el.textContent=`⚠️ Cache local — ${propostas.length} propostas`;
+        showToast('Erro ao conectar ao banco. Usando cache local.','error');
+      } else {
+        if(el)el.textContent='❌ Sem conexão e sem cache';
+        showToast('Sem conexão com o banco de dados','error');
+      }
+    }
+  }
+
+  function _readFile(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}));}catch(err){reject(err);}};
+      r.onerror=reject; r.readAsArrayBuffer(file);
+    });
+  }
+
+  async function handleUploadLojas(event){
+    const file=event.target.files[0]; if(!file)return;
+    const el=document.getElementById('status-lojas');
+    document.getElementById('card-lojas').classList.add('active');
+    el.textContent='⏳ Processando...';
+    try{
+      const rows=await _readFile(file); lojas={};
+      rows.forEach(r=>{
+        const dn=String(r['DN']||r['dn']||r['Dn']||'').trim();
+        const razao=r['RAZAO SOCIAL']||r['Razao Social']||r['razao_social']||r['LOJA']||'';
+        const gcm=r['GCM']||r['Gcm']||r['gcm']||'';
+        const coord=r['COORDENADOR']||r['Coordenador']||r['coordenador']||'';
+        if(dn)lojas[dn]={RAZAO_SOCIAL:String(razao),GCM:String(gcm),COORDENADOR:String(coord)};
+      });
+      localStorage.setItem('lojas_data',JSON.stringify(lojas));
+      el.textContent=`✅ ${Object.keys(lojas).length} lojas carregadas`;
+      showToast(`${Object.keys(lojas).length} lojas importadas!`,'success');
+      if(propostas.length>0){propostas=propostas.map(_enrichRow);localStorage.setItem('propostas_data',JSON.stringify(propostas));_refreshSelects();renderTable();}
+    }catch(err){el.textContent='❌ Erro ao ler arquivo';showToast('Erro: '+err.message,'error');}
+    document.getElementById('card-lojas').classList.remove('active');
+  }
+
+  async function handleUploadPropostas(event){
+    const file=event.target.files[0]; if(!file)return;
+    const el=document.getElementById('status-propostas');
+    document.getElementById('card-propostas').classList.add('active');
+    el.textContent='⏳ Processando...';
+    try{
+      const rows=await _readFile(file);
+      const existing={};
+      propostas.forEach(p=>{const k=p.PROPOSTA||p.ID_PROPOSTA;if(k)existing[k]={_obs:p._obs||'',_pgto:p._pgto||false};});
+      propostas=rows.map(r=>{
+        const row=_normalizeRow(r);
+        const k=row.PROPOSTA||row.ID_PROPOSTA;
+        if(k&&existing[k]){row._obs=existing[k]._obs;row._pgto=existing[k]._pgto;}
+        return _enrichRow(row);
+      });
+      localStorage.setItem('propostas_data',JSON.stringify(propostas));
+      el.textContent=`✅ ${propostas.length} propostas carregadas`;
+      showToast(`${propostas.length} propostas importadas!`,'success');
+      _refreshSelects(); renderTable();
+      await saveToSupabase(true);
+    }catch(err){el.textContent='❌ Erro';showToast('Erro: '+err.message,'error');}
+    document.getElementById('card-propostas').classList.remove('active');
+  }
+
+  function _normalizeRow(r){
+    return{ID_PROPOSTA:String(r['ID_PROPOSTA']||r['id_proposta']||''),VENDEDOR:String(r['VENDEDOR']||r['vendedor']||r['Nome']||''),PROPOSTA:String(r['PROPOSTA']||r['proposta']||r['Proposta']||''),DATA_INCLUSAO:String(r['DATA_INCLUSAO']||r['data_inclusao']||r['Data']||''),DN:String(r['CONCESSIONARIA']||r['DN']||r['dn']||'').trim(),STATUS:String(r['STATUS']||r['status']||r['Status']||''),_obs:'',_pgto:false};
+  }
+  function _enrichRow(r){const l=lojas[r.DN]||{};return{...r,LOJA:l.RAZAO_SOCIAL||'',GCM:l.GCM||'',COORDENADOR:l.COORDENADOR||''};}
+
+  function renderTable(){
+    const gf=document.getElementById('gcm-select').value;
+    const cf=document.getElementById('coord-select').value;
+    let rows=[...propostas];
+    if(currentFilter!=='all')rows=rows.filter(r=>r.STATUS===currentFilter);
+    if(gf)rows=rows.filter(r=>r.GCM===gf);
+    if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
+    if(somenteFilial)rows=rows.filter(r=>r.GCM&&r.GCM.trim()!=='');
+    rows.sort((a,b)=>{let va=a[sortField]||'',vb=b[sortField]||'';if(sortField==='DATA_INCLUSAO'){va=new Date(va);vb=new Date(vb);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}return va<vb?-sortDir:va>vb?sortDir:0;});
+    const semVinculo=propostas.filter(r=>!r.GCM||r.GCM.trim()==='').length;
+    document.getElementById('pill-total').textContent=rows.length+' total';
+    document.getElementById('pill-ok').textContent=rows.filter(r=>r.STATUS==='Aprovada').length+' aprov.';
+    document.getElementById('pill-no').textContent=rows.filter(r=>r.STATUS==='Recusada').length+' recus.';
+    document.getElementById('pill-sem').textContent=semVinculo+' sem vínculo';
+    const tbody=document.getElementById('table-body');
+    if(!rows.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🔍</div><h3>Nenhum resultado</h3><p>Tente alterar os filtros</p></div></td></tr>`;return;}
+    tbody.innerHTML=rows.map(r=>{
+      const idx=propostas.findIndex(p=>p.ID_PROPOSTA&&p.ID_PROPOSTA===r.ID_PROPOSTA?true:p.PROPOSTA===r.PROPOSTA&&p.VENDEDOR===r.VENDEDOR&&p.DATA_INCLUSAO===r.DATA_INCLUSAO);
+      const rc=r.STATUS==='Aprovada'?'row-approved':r.STATUS==='Recusada'?'row-rejected':'row-included';
+      const badge=r.STATUS==='Aprovada'?`<span class="badge badge-approved">✓ Aprovada</span>`:r.STATUS==='Recusada'?`<span class="badge badge-rejected">✕ Recusada</span>`:`<span class="badge badge-included">⏳ Incluída</span>`;
+      return`<tr class="${rc}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><textarea class="obs-input" rows="1" placeholder="Digite suas observações..." data-idx="${idx}" onchange="App.updateObs(this)">${_e(r._obs||'')}</textarea></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="App.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
+    }).join('');
+  }
+
+  function _fmt(d){if(!d)return'';const dt=new Date(d);if(isNaN(dt))return String(d).replace('T',' ').substring(0,16);return dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+  function _e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+  function setFilter(f){currentFilter=f;document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));const m={all:'.all',Aprovada:'.approved',Recusada:'.rejected',Incluida:'.included'};document.querySelector('.filter-btn'+m[f])?.classList.add('active');renderTable();}
+  function sortBy(f){sortDir=sortField===f?-sortDir:1;sortField=f;renderTable();}
+  function toggleFilial(btn){somenteFilial=!somenteFilial;btn.classList.toggle('active',somenteFilial);renderTable();}
+  function recarregarBanco(){_carregarDoSupabase();}
+  function _refreshSelects(){
+    const gcms=[...new Set(propostas.map(r=>r.GCM).filter(Boolean))].sort();
+    const coords=[...new Set(propostas.map(r=>r.COORDENADOR).filter(Boolean))].sort();
+    const gs=document.getElementById('gcm-select'),cs=document.getElementById('coord-select');
+    const gv=gs.value,cv=cs.value;
+    gs.innerHTML='<option value="">Todos</option>'+gcms.map(g=>`<option>${_e(g)}</option>`).join('');
+    cs.innerHTML='<option value="">Todos</option>'+coords.map(c=>`<option>${_e(c)}</option>`).join('');
+    gs.value=gv;cs.value=cv;
+  }
+
+  function updateObs(el){
+    const idx=parseInt(el.dataset.idx);if(isNaN(idx)||!propostas[idx])return;
+    propostas[idx]._obs=el.value;
+    try{localStorage.setItem('propostas_data',JSON.stringify(propostas));}catch(e){}
+    clearTimeout(_debounceTimer);
+    _debounceTimer=setTimeout(()=>_salvarLinha(propostas[idx]),1500);
+  }
+  function togglePgto(btn){
+    const idx=parseInt(btn.dataset.idx);if(isNaN(idx)||!propostas[idx])return;
+    propostas[idx]._pgto=!propostas[idx]._pgto;
+    btn.classList.toggle('paid');btn.textContent=propostas[idx]._pgto?'💰':'💵';
+    try{localStorage.setItem('propostas_data',JSON.stringify(propostas));}catch(e){}
+    _salvarLinha(propostas[idx]);
+  }
+
+  async function _salvarLinha(r){
+    try{
+      await SB.post('propostas',[{id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||null,observacao:r._obs||null,pgto:r._pgto||false}],'resolution=merge-duplicates');
+      showToast('💾 Salvo!','success');
+    }catch(e){showToast('Erro ao salvar','error');}
+  }
+
+  async function saveToSupabase(silencioso=false){
+    if(!silencioso)showToast('Salvando...','info');
+    try{
+      const payload=propostas.map(r=>({id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||null,observacao:r._obs||null,pgto:r._pgto||false}));
+      await SB.post('propostas',payload,'resolution=merge-duplicates');
+      if(!silencioso)showToast('✅ Salvo no Supabase!','success');
+      else showToast('☁️ Propostas enviadas ao banco!','success');
+      document.getElementById('save-bar').classList.remove('visible');
+    }catch(e){showToast('Erro: '+e.message,'error');}
+  }
+
+  function exportCSV(){
+    const gf=document.getElementById('gcm-select').value,cf=document.getElementById('coord-select').value;
+    let rows=[...propostas];
+    if(currentFilter!=='all')rows=rows.filter(r=>r.STATUS===currentFilter);
+    if(gf)rows=rows.filter(r=>r.GCM===gf);if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
+    const h=['Nome','Proposta','Data','Status','DN','Loja','GCM','Coordenador','Observação','Pgto'];
+    const csv=[h.join(';'),...rows.map(r=>[r.VENDEDOR,r.PROPOSTA,r.DATA_INCLUSAO,r.STATUS,r.DN,r.LOJA,r.GCM,r.COORDENADOR,(r._obs||'').replace(/;/g,','),r._pgto?'Sim':'Não'].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(';'))].join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`propostas_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+    showToast('CSV exportado!','success');
+  }
+
+  return{init,handleUploadLojas,handleUploadPropostas,renderTable,setFilter,sortBy,toggleFilial,recarregarBanco,updateObs,togglePgto,saveToSupabase,exportCSV};
+})();
+
+// ════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════
+function showToast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.className=`show ${type}`;clearTimeout(t._t);t._t=setTimeout(()=>{t.className='';},3000);}
+
+// ════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!Auth.checkSession()){
+    // nada — tela de login já está visível
+  }
+});
+</script>
+</body>
+</html>
