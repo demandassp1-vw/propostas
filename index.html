@@ -705,61 +705,81 @@ const App = (() => {
   async function _carregarDoSupabase(){
     const el=document.getElementById('status-propostas');
     if(el)el.textContent='⏳ Carregando do banco...';
+    const hoje=new Date().toISOString().slice(0,10);
     try{
-      let query='propostas?select=*&order=data_inclusao.desc&limit=50000';
-      if(_user.role==='gcm'){
-        query=`propostas?gcm=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
-      } else if(_user.role==='coordenador'){
-        query=`propostas?coordenador=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
-      } else if(_user.role==='regional'){
-        query=`propostas?regional=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      // Tenta carregar o snapshot de hoje primeiro
+      let snapQuery=`snapshots?data_snapshot=eq.${hoje}&select=*&order=data_inclusao.desc&limit=50000`;
+      if(_user.role==='gcm')
+        snapQuery=`snapshots?data_snapshot=eq.${hoje}&gcm=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      else if(_user.role==='coordenador')
+        snapQuery=`snapshots?data_snapshot=eq.${hoje}&coordenador=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      else if(_user.role==='regional')
+        snapQuery=`snapshots?data_snapshot=eq.${hoje}&regional=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+
+      const snapData=await SB.get(snapQuery);
+
+      if(Array.isArray(snapData)&&snapData.length>0){
+        // Usa o snapshot do dia
+        propostas=snapData.map(r=>({
+          ID_PROPOSTA:  r.id_proposta||'',  VENDEDOR:r.vendedor||'',
+          PROPOSTA:     r.proposta||'',     DATA_INCLUSAO:r.data_inclusao||'',
+          DN:           r.dn||'',           LOJA:r.loja||'',
+          GCM:          r.gcm||'',          COORDENADOR:r.coordenador||'',
+          REGIONAL:     r.regional||'',     EXECUTIVO:r.executivo||'',
+          STATUS:       r.status||'',       _obs:r.observacao||'',
+          _pgto:        r.pgto||false,
+        }));
+        localStorage.setItem('propostas_data',JSON.stringify(propostas));
+        if(el)el.textContent=`✅ ${propostas.length} propostas (hoje)`;
+        _refreshSelects(); renderTable();
+        showToast(`${propostas.length} propostas de hoje carregadas`,'success');
+        return;
       }
-      // executivo: query sem filtro — vê tudo
+
+      // Sem snapshot hoje — fallback para tabela propostas (upload direto)
+      let query='propostas?select=*&order=data_inclusao.desc&limit=50000';
+      if(_user.role==='gcm')
+        query=`propostas?gcm=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      else if(_user.role==='coordenador')
+        query=`propostas?coordenador=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      else if(_user.role==='regional')
+        query=`propostas?regional=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+
       const data=await SB.get(query);
       if(!Array.isArray(data)) throw new Error(data.message||data.hint||JSON.stringify(data));
       if(data.length>0){
         propostas=data.map(r=>({
-          ID_PROPOSTA:  r.id_proposta||'', VENDEDOR:r.vendedor||'',
-          PROPOSTA:     r.proposta||'',    DATA_INCLUSAO:r.data_inclusao||'',
-          DN:           r.dn||'',          LOJA:r.loja||'',
-          GCM:          r.gcm||'',         COORDENADOR:r.coordenador||'',
-          REGIONAL:     r.regional||'',    EXECUTIVO:r.executivo||'',
-          STATUS:       r.status||'',      _obs:r.observacao||'',
-          _pgto:        r.pgto||false,     _sb_id:r.id,
+          ID_PROPOSTA:  r.id_proposta||'',  VENDEDOR:r.vendedor||'',
+          PROPOSTA:     r.proposta||'',     DATA_INCLUSAO:r.data_inclusao||'',
+          DN:           r.dn||'',           LOJA:r.loja||'',
+          GCM:          r.gcm||'',          COORDENADOR:r.coordenador||'',
+          REGIONAL:     r.regional||'',     EXECUTIVO:r.executivo||'',
+          STATUS:       r.status||'',       _obs:r.observacao||'',
+          _pgto:        r.pgto||false,      _sb_id:r.id,
           _updated_at:  r.updated_at||'',
         }));
         localStorage.setItem('propostas_data',JSON.stringify(propostas));
         if(el)el.textContent=`✅ ${propostas.length} propostas`;
-        // Pega a data mais recente de updated_at do banco
-        const maisRecente=propostas
-          .map(r=>r._updated_at)
-          .filter(Boolean)
-          .sort()
-          .pop();
+        const maisRecente=propostas.map(r=>r._updated_at).filter(Boolean).sort().pop();
         _mostrarUltimaAtualizacao(maisRecente);
         _refreshSelects(); renderTable();
         showToast(`${propostas.length} propostas carregadas`,'success');
       } else {
         propostas=[];
-        if(el)el.textContent='Nenhuma proposta no banco ainda';
+        if(el)el.textContent='Nenhuma proposta ainda — faça o upload';
         renderTable();
-        showToast('Nenhuma proposta encontrada para o seu perfil','info');
       }
     }catch(e){
-      console.error('Erro ao carregar Supabase:',e);
+      console.error('Erro ao carregar:',e);
       const cp=localStorage.getItem('propostas_data');
       if(cp){
         try{propostas=JSON.parse(cp);}catch(_){}
         _refreshSelects(); renderTable();
         if(el)el.textContent=`⚠️ Cache local — ${propostas.length} propostas`;
-        showToast('Erro ao conectar ao banco. Usando cache local.','error');
       } else {
         if(el)el.textContent='❌ Sem conexão e sem cache';
-        showToast('Sem conexão com o banco de dados','error');
       }
     }
-  }
-
   function _mostrarUltimaAtualizacao(isoDate){
     const uaEl=document.getElementById('ultima-atualizacao');
     if(!uaEl)return;
@@ -1314,10 +1334,9 @@ const App = (() => {
 
   async function _salvarLinha(r){
     try{
-      await SB.post(
-        'propostas?on_conflict=id_proposta',
-        [{id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||null,observacao:r._obs||null,pgto:r._pgto||false}],
-        'resolution=merge-duplicates,return=minimal'
+      await SB.patch(
+        `propostas?id_proposta=eq.${encodeURIComponent(r.ID_PROPOSTA||'')}`,
+        {observacao:r._obs||null, pgto:r._pgto||false}
       );
       showToast('💾 Salvo!','success');
     }catch(e){showToast('Erro ao salvar','error');}
@@ -1326,15 +1345,18 @@ const App = (() => {
   async function saveToSupabase(silencioso=false){
     if(!silencioso)showToast('Salvando...','info');
     try{
+      // Apaga tudo da tabela antes de inserir
+      await fetch(`${SB_URL}/rest/v1/propostas?id=gte.0`,{
+        method:'DELETE',
+        headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Prefer':'return=minimal'}
+      });
+      // Insere as propostas atuais em lotes
       const payload=propostas.map(r=>({id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,regional:r.REGIONAL||null,executivo:r.EXECUTIVO||null,status:r.STATUS||null,observacao:r._obs||null,pgto:r._pgto||false}));
-      // Envia em lotes de 500 para não sobrecarregar
-      const loteSize=500;
-      for(let i=0;i<payload.length;i+=loteSize){
-        const lote=payload.slice(i,i+loteSize);
-        await SB.post('propostas?on_conflict=id_proposta',lote,'resolution=merge-duplicates,return=minimal');
+      for(let i=0;i<payload.length;i+=500){
+        await SB.post('propostas',payload.slice(i,i+500),'return=minimal');
       }
-      if(!silencioso)showToast('✅ Salvo no Supabase!','success');
-      else showToast('☁️ Propostas enviadas ao banco!','success');
+      if(!silencioso)showToast('✅ Base atualizada!','success');
+      else showToast('☁️ Base atualizada com sucesso!','success');
       document.getElementById('save-bar').classList.remove('visible');
     }catch(e){showToast('Erro: '+e.message,'error');}
   }
