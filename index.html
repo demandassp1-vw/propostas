@@ -706,6 +706,14 @@ const App = (() => {
     const el=document.getElementById('status-propostas');
     if(el)el.textContent='⏳ Carregando do banco...';
     try{
+      // Primeiro busca a data da última atualização no banco
+      const ultData=await SB.get('config?chave=eq.ultima_atualizacao&select=valor');
+      let dataFiltro='';
+      if(Array.isArray(ultData)&&ultData.length>0){
+        // Pega apenas a data (YYYY-MM-DD) do timestamp
+        dataFiltro=ultData[0].valor.slice(0,10);
+      }
+
       let query='propostas?select=*&order=data_inclusao.desc&limit=50000';
       if(_user.role==='gcm'){
         query=`propostas?gcm=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
@@ -715,10 +723,18 @@ const App = (() => {
         query=`propostas?regional=eq.${encodeURIComponent(_user.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
       }
       // executivo: query sem filtro — vê tudo
+
       const data=await SB.get(query);
       if(!Array.isArray(data)) throw new Error(data.message||data.hint||JSON.stringify(data));
       if(data.length>0){
-        propostas=data.map(r=>({
+        let registros=data;
+        // Filtra pela data da última atualização se disponível
+        if(dataFiltro){
+          const filtrados=data.filter(r=>(r.updated_at||'').slice(0,10)===dataFiltro);
+          // Só aplica filtro se retornar resultados
+          if(filtrados.length>0) registros=filtrados;
+        }
+        propostas=registros.map(r=>({
           ID_PROPOSTA:  r.id_proposta||'', VENDEDOR:r.vendedor||'',
           PROPOSTA:     r.proposta||'',    DATA_INCLUSAO:r.data_inclusao||'',
           DN:           r.dn||'',          LOJA:r.loja||'',
@@ -730,12 +746,7 @@ const App = (() => {
         }));
         localStorage.setItem('propostas_data',JSON.stringify(propostas));
         if(el)el.textContent=`✅ ${propostas.length} propostas`;
-        // Pega a data mais recente de updated_at do banco
-        const maisRecente=propostas
-          .map(r=>r._updated_at)
-          .filter(Boolean)
-          .sort()
-          .pop();
+        const maisRecente=propostas.map(r=>r._updated_at).filter(Boolean).sort().pop();
         _mostrarUltimaAtualizacao(maisRecente);
         _refreshSelects(); renderTable();
         showToast(`${propostas.length} propostas carregadas`,'success');
