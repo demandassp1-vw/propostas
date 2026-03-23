@@ -468,8 +468,11 @@ const Auth = (() => {
     btn.disabled=true; btn.textContent='Verificando...';
 
     try {
-      // Busca usuário no banco
-      const rows = await SB.get(`usuarios?nome=eq.${encodeURIComponent(nome)}&select=*`);
+      // Busca todos os usuários e filtra localmente — evita problemas de encoding
+      const todosUsuarios = await SB.get(`usuarios?select=*`);
+      const rows = Array.isArray(todosUsuarios)
+        ? todosUsuarios.filter(u => (u.nome||'').toUpperCase().trim() === nome)
+        : [];
 
       // Usuário não existe — verifica se o nome é um GCM ou Coordenador válido
       if (!rows || rows.length === 0) {
@@ -519,7 +522,8 @@ const Auth = (() => {
           if (nova.length<6){_showErr('Mínimo 6 caracteres.');btn.disabled=false;btn.textContent='Confirmar nova senha';return;}
           if (nova!==confirma){_showErr('As senhas não coincidem.');btn.disabled=false;btn.textContent='Confirmar nova senha';return;}
           const hash=await _sha256(nova);
-          await SB.patch(`usuarios?nome=eq.${encodeURIComponent(nome)}`,{senha_hash:hash,primeiro_acesso:false});
+          const uid = rows[0].id;
+          await SB.patch(`usuarios?id=eq.${uid}`,{senha_hash:hash,primeiro_acesso:false});
           _user={nome,role:u.role};
           _entrar();
         } else {
@@ -537,44 +541,36 @@ const Auth = (() => {
   }
 
   async function _verificarNomeValido(nome) {
-    // 1. Verifica na tabela usuarios (já cadastrado antes)
-    const u = await SB.get(`usuarios?nome=eq.${encodeURIComponent(nome)}&select=nome&limit=1`);
-    if (u&&u.length>0) return true;
-    // 2. Verifica na tabela lojas
-    const l1 = await SB.get(`lojas?gcm=eq.${encodeURIComponent(nome)}&select=gcm&limit=1`);
-    if (l1&&l1.length>0) return true;
-    const l2 = await SB.get(`lojas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
-    if (l2&&l2.length>0) return true;
-    const l3 = await SB.get(`lojas?regional=eq.${encodeURIComponent(nome)}&select=regional&limit=1`);
-    if (l3&&l3.length>0) return true;
-    const l4 = await SB.get(`lojas?executivo=eq.${encodeURIComponent(nome)}&select=executivo&limit=1`);
-    if (l4&&l4.length>0) return true;
-    // 3. Verifica na tabela propostas (fallback)
-    const r1 = await SB.get(`propostas?gcm=eq.${encodeURIComponent(nome)}&select=gcm&limit=1`);
-    if (r1&&r1.length>0) return true;
-    const r2 = await SB.get(`propostas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
-    if (r2&&r2.length>0) return true;
-    return false;
+    // Verifica se já existe na tabela usuarios
+    try{
+      const u = await SB.get(`usuarios?nome=eq.${encodeURIComponent(nome)}&select=nome&limit=1`);
+      if (Array.isArray(u)&&u.length>0) return true;
+    }catch(e){}
+    // Verifica na tabela lojas em todas as colunas de hierarquia
+    try{
+      const l = await SB.get(`lojas?select=gcm,coordenador,regional,executivo&limit=50000`);
+      if (!Array.isArray(l)) return false;
+      return l.some(r=>
+        (r.gcm||'').toUpperCase().trim()===nome ||
+        (r.coordenador||'').toUpperCase().trim()===nome ||
+        (r.regional||'').toUpperCase().trim()===nome ||
+        (r.executivo||'').toUpperCase().trim()===nome
+      );
+    }catch(e){ return false; }
   }
 
   async function _descobrirRole(nome) {
-    // Verifica na tabela lojas primeiro (mais confiável)
-    const l4 = await SB.get(`lojas?executivo=eq.${encodeURIComponent(nome)}&select=executivo&limit=1`);
-    if (l4&&l4.length>0) return 'executivo';
-    const l3 = await SB.get(`lojas?regional=eq.${encodeURIComponent(nome)}&select=regional&limit=1`);
-    if (l3&&l3.length>0) return 'regional';
-    const l2 = await SB.get(`lojas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
-    if (l2&&l2.length>0) return 'coordenador';
-    const l1 = await SB.get(`lojas?gcm=eq.${encodeURIComponent(nome)}&select=gcm&limit=1`);
-    if (l1&&l1.length>0) return 'gcm';
-    // Fallback: verifica na tabela propostas
-    const r4 = await SB.get(`propostas?executivo=eq.${encodeURIComponent(nome)}&select=executivo&limit=1`);
-    if (r4&&r4.length>0) return 'executivo';
-    const r3 = await SB.get(`propostas?regional=eq.${encodeURIComponent(nome)}&select=regional&limit=1`);
-    if (r3&&r3.length>0) return 'regional';
-    const r2 = await SB.get(`propostas?coordenador=eq.${encodeURIComponent(nome)}&select=coordenador&limit=1`);
-    if (r2&&r2.length>0) return 'coordenador';
-    return 'gcm';
+    try{
+      const l = await SB.get(`lojas?select=gcm,coordenador,regional,executivo&limit=50000`);
+      if (!Array.isArray(l)) return 'gcm';
+      const temExec  = l.some(r=>(r.executivo||'').toUpperCase().trim()===nome);
+      if(temExec) return 'executivo';
+      const temReg   = l.some(r=>(r.regional||'').toUpperCase().trim()===nome);
+      if(temReg) return 'regional';
+      const temCoord = l.some(r=>(r.coordenador||'').toUpperCase().trim()===nome);
+      if(temCoord) return 'coordenador';
+      return 'gcm';
+    }catch(e){ return 'gcm'; }
   }
 
   function _entrar() {
@@ -639,9 +635,11 @@ const Auth = (() => {
     const nome = sel.value;
     if (!nome) { _showResetMsg('Selecione um usuário.', 'error'); return; }
     try {
-      // Reseta: limpa senha_hash e marca primeiro_acesso = true
-      // O usuário terá que entrar com nome como senha e criar nova senha
-      await SB.patch(`usuarios?nome=eq.${encodeURIComponent(nome)}`, {
+      // Busca o id do usuário para fazer patch por id (evita problema de encoding)
+      const todos = await SB.get('usuarios?select=id,nome');
+      const u = Array.isArray(todos) ? todos.find(r=>(r.nome||'').toUpperCase().trim()===nome.toUpperCase().trim()) : null;
+      if (!u) { _showResetMsg('Usuário não encontrado.', 'error'); return; }
+      await SB.patch(`usuarios?id=eq.${u.id}`, {
         senha_hash: null,
         primeiro_acesso: true,
       });
