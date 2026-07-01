@@ -44,6 +44,10 @@ header #header-date{font-size:12px;color:rgba(255,255,255,.55);display:block}
 .user-role{font-size:10px;background:rgba(255,255,255,.2);border-radius:10px;padding:1px 7px;text-transform:uppercase;letter-spacing:.5px}
 .btn-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.8);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
 .btn-logout:hover{background:rgba(255,255,255,.2);color:#fff}
+.btn-ap-toggle{background:#bae6fd;color:#075985;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+.btn-ap-toggle:hover{background:#7dd3fc}
+.btn-ap-toggle.btn-voltar{background:rgba(255,255,255,.15);color:#fff}
+.btn-ap-toggle.btn-voltar:hover{background:rgba(255,255,255,.25)}
 
 /* ── MAIN ── */
 main{padding:24px 28px;max-width:1700px;margin:0 auto}
@@ -187,11 +191,13 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
   <div class="header-left">
     <div class="logo">📊</div>
     <div>
-      <h1>Acompanhamento de Propostas</h1>
+      <h1 id="header-title">Acompanhamento de Propostas</h1>
       <span id="header-date"></span>
     </div>
   </div>
   <div class="header-right">
+    <button class="btn-ap-toggle" id="btn-ap" onclick="AppAP.abrirTela()">💰 AP x Não PG</button>
+    <button class="btn-ap-toggle btn-voltar" id="btn-voltar-ap" style="display:none" onclick="AppAP.voltarPrincipal()">← Voltar</button>
     <div class="user-pill">
       <span id="user-nome-display"></span>
       <span class="user-role" id="user-role-display"></span>
@@ -299,7 +305,7 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
   </div>
 </div>
 
-<main>
+<main id="main-principal">
   <div class="upload-panel">
 
     <!-- Upload lojas — só coordenador/admin vê -->
@@ -400,6 +406,65 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
         <tr><td colspan="10">
           <div class="empty-state"><div class="empty-icon">📂</div>
             <h3>Carregando propostas...</h3><p>Aguarde a sincronização com o banco</p>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<main id="main-ap" style="display:none">
+  <div class="upload-panel">
+    <div class="upload-card upload-card-compact" id="card-propostas-ap">
+      <input type="file" id="file-propostas-ap" accept=".xlsx,.xls,.csv" onchange="AppAP.handleUpload(event)">
+      <span class="upload-icon-sm">📄</span>
+      <div class="upload-compact-info">
+        <span class="upload-title-sm">Relatório de Propostas</span>
+        <span class="upload-meta-sm" id="ultima-atualizacao-ap"></span>
+      </div>
+      <span class="upload-status-sm" id="status-propostas-ap"></span>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <span class="filter-label">Pagamento:</span>
+    <button class="filter-btn all active" id="ap-filtro-todas" onclick="AppAP.setFilter('todas')">Todas</button>
+    <button class="filter-btn included" id="ap-filtro-naopago" onclick="AppAP.setFilter('naopago')">🕐 Não Pagas</button>
+    <button class="filter-btn approved" id="ap-filtro-pago" onclick="AppAP.setFilter('pago')">💰 Pagas</button>
+    <button class="filter-btn filial" onclick="AppAP.toggleFilial(this)">🏢 Só minha filial</button>
+    <div class="filter-divider"></div>
+    <span class="filter-label">GCM:</span>
+    <select class="filter-select" id="ap-gcm-select" onchange="AppAP.renderTable()"><option value="">Todos</option></select>
+    <span class="filter-label">Coordenador:</span>
+    <select class="filter-select" id="ap-coord-select" onchange="AppAP.renderTable()"><option value="">Todos</option></select>
+    <div class="stats-pills">
+      <span class="pill pill-total" id="ap-pill-total">0 total</span>
+      <span class="pill pill-ok"    id="ap-pill-pagas">0 pagas</span>
+      <span class="pill pill-no"    id="ap-pill-naopagas">0 não pagas</span>
+      <span class="pill pill-sem"   id="ap-pill-sem">0 sem vínculo</span>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table id="ap-table">
+      <thead>
+        <tr>
+          <th onclick="AppAP.sortBy('VENDEDOR')">Nome (C) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('PROPOSTA')">Proposta (G) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('DATA_INCLUSAO')">Data (I) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('STATUS')">Status (V) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('DN')">DN (F) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('LOJA')">Loja (PROCV) <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('GCM')">GCM <span class="sort-icon">⇅</span></th>
+          <th onclick="AppAP.sortBy('COORDENADOR')">Coordenador <span class="sort-icon">⇅</span></th>
+          <th>Observação</th>
+          <th>Pgto</th>
+        </tr>
+      </thead>
+      <tbody id="table-body-ap">
+        <tr><td colspan="10">
+          <div class="empty-state"><div class="empty-icon">📂</div>
+            <h3>Carregando propostas aprovadas...</h3><p>Aguarde a sincronização com o banco</p>
           </div>
         </td></tr>
       </tbody>
@@ -591,6 +656,7 @@ const Auth = (() => {
       document.querySelectorAll('.admin-only').forEach(el=>el.style.display='block');
     }
     App.init(_user);
+    AppAP.init(_user);
   }
 
   function logout() {
@@ -1413,6 +1479,252 @@ const App = (() => {
   }
 
   return{init,handleUploadLojas,handleUploadPropostas,renderTable,setFilter,sortBy,toggleFilial,recarregarBanco,tirarSnapshot,carregarSnapshot,voltarHoje,abrirLimparSnapshots,fecharLimparSnapshots,executarLimparSnap,abrirDashboard,fecharDashboard,updateObs,togglePgto,saveToSupabase,exportCSV};
+})();
+
+// ════════════════════════════════════════════════
+//  APP AP — TELA "APROVADAS E NÃO PAGAS"
+//  Tabela própria no Supabase (propostas_aprovadas), independente
+//  da tabela principal. Upload aqui NUNCA limpa o histórico: apenas
+//  acrescenta as novas aprovadas e preserva observação/pgto já salvos.
+// ════════════════════════════════════════════════
+const AppAP = (() => {
+  let lojasAP={}, propostasAP=[], currentFilterAP='todas', sortFieldAP='DATA_INCLUSAO', sortDirAP=-1, somenteFilialAP=false;
+  let _userAP=null, _debounceTimerAP=null;
+
+  function init(user){
+    _userAP=user;
+    const cl=localStorage.getItem('lojas_data');
+    if(cl){try{lojasAP=JSON.parse(cl);}catch(e){}}
+  }
+
+  async function abrirTela(){
+    document.getElementById('main-principal').style.display='none';
+    document.getElementById('main-ap').style.display='block';
+    document.getElementById('btn-ap').style.display='none';
+    document.getElementById('btn-voltar-ap').style.display='inline-block';
+    document.getElementById('header-title').textContent='Aprovadas e Não Pagas';
+    await _carregarLojas();
+    await _carregarDoSupabase(true);
+  }
+
+  function voltarPrincipal(){
+    document.getElementById('main-ap').style.display='none';
+    document.getElementById('main-principal').style.display='block';
+    document.getElementById('btn-voltar-ap').style.display='none';
+    document.getElementById('btn-ap').style.display='inline-block';
+    document.getElementById('header-title').textContent='Acompanhamento de Propostas';
+  }
+
+  async function _carregarLojas(){
+    const cl=localStorage.getItem('lojas_data');
+    if(cl){try{lojasAP=JSON.parse(cl);}catch(e){}}
+    if(Object.keys(lojasAP).length>0)return;
+    try{
+      const data=await SB.get('lojas?select=*&limit=50000');
+      if(Array.isArray(data)&&data.length>0){
+        lojasAP={};
+        data.forEach(r=>{
+          if(r.dn)lojasAP[String(r.dn).trim()]={RAZAO_SOCIAL:r.razao_social||'',GCM:r.gcm||'',COORDENADOR:r.coordenador||'',REGIONAL:r.regional||'',EXECUTIVO:r.executivo||''};
+        });
+      }
+    }catch(e){console.warn('Erro ao carregar lojas (AP):',e);}
+  }
+
+  function _enrichRow(r){
+    const l=lojasAP[r.DN]||{};
+    return{...r,LOJA:l.RAZAO_SOCIAL||'',GCM:l.GCM||'',COORDENADOR:l.COORDENADOR||'',REGIONAL:l.REGIONAL||'',EXECUTIVO:l.EXECUTIVO||''};
+  }
+
+  function _normalizeRow(r){
+    return{ID_PROPOSTA:String(r['ID_PROPOSTA']||r['id_proposta']||''),VENDEDOR:String(r['VENDEDOR']||r['vendedor']||r['Nome']||''),PROPOSTA:String(r['PROPOSTA']||r['proposta']||r['Proposta']||''),DATA_INCLUSAO:String(r['DATA_INCLUSAO']||r['data_inclusao']||r['Data']||''),DN:String(r['CONCESSIONARIA']||r['DN']||r['dn']||'').trim(),STATUS:String(r['STATUS']||r['status']||r['Status']||''),_obs:'',_pgto:false};
+  }
+
+  function _readFile(file){
+    return new Promise((resolve,reject)=>{
+      const r=new FileReader();
+      r.onload=e=>{try{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});resolve(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''}));}catch(err){reject(err);}};
+      r.onerror=reject; r.readAsArrayBuffer(file);
+    });
+  }
+
+  async function _carregarDoSupabase(silencioso){
+    const el=document.getElementById('status-propostas-ap');
+    if(el)el.textContent='⏳ Carregando do banco...';
+    try{
+      let query='propostas_aprovadas?select=*&order=data_inclusao.desc&limit=50000';
+      if(_userAP.role==='gcm'){
+        query=`propostas_aprovadas?gcm=eq.${encodeURIComponent(_userAP.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      } else if(_userAP.role==='coordenador'){
+        query=`propostas_aprovadas?coordenador=eq.${encodeURIComponent(_userAP.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      } else if(_userAP.role==='regional'){
+        query=`propostas_aprovadas?regional=eq.${encodeURIComponent(_userAP.nome)}&select=*&order=data_inclusao.desc&limit=50000`;
+      }
+      // executivo: sem filtro — vê tudo
+      const data=await SB.get(query);
+      if(!Array.isArray(data)) throw new Error(data.message||data.hint||JSON.stringify(data));
+      propostasAP=data.map(r=>({
+        ID_PROPOSTA:  r.id_proposta||'', VENDEDOR:r.vendedor||'',
+        PROPOSTA:     r.proposta||'',    DATA_INCLUSAO:r.data_inclusao||'',
+        DN:           r.dn||'',          LOJA:r.loja||'',
+        GCM:          r.gcm||'',         COORDENADOR:r.coordenador||'',
+        REGIONAL:     r.regional||'',    EXECUTIVO:r.executivo||'',
+        STATUS:       r.status||'Aprovada', _obs:r.observacao||'',
+        _pgto:        r.pgto||false,     _sb_id:r.id,
+        _updated_at:  r.updated_at||'',
+      }));
+      if(el)el.textContent=propostasAP.length?`✅ ${propostasAP.length} aprovadas`:'Nenhuma aprovada no banco ainda';
+      _mostrarUltimaAtualizacao();
+      _refreshSelects(); renderTable();
+      if(!silencioso)showToast(`${propostasAP.length} propostas aprovadas carregadas`,'success');
+    }catch(e){
+      console.error('Erro ao carregar Aprovadas e Não Pagas:',e);
+      if(el)el.textContent='❌ Erro ao carregar';
+      showToast('Erro ao conectar ao banco (Aprovadas e Não Pagas)','error');
+    }
+  }
+
+  function _mostrarUltimaAtualizacao(){
+    const uaEl=document.getElementById('ultima-atualizacao-ap');
+    if(!uaEl)return;
+    const maisRecente=propostasAP.map(r=>r._updated_at).filter(Boolean).sort().pop();
+    if(maisRecente){
+      const dt=new Date(maisRecente);
+      uaEl.textContent='🕐 Última atualização: '+dt.toLocaleDateString('pt-BR')+' às '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    }
+  }
+
+  async function handleUpload(event){
+    const file=event.target.files[0]; if(!file)return;
+    const el=document.getElementById('status-propostas-ap');
+    document.getElementById('card-propostas-ap').classList.add('active');
+    el.textContent='⏳ Processando...';
+    try{
+      if(Object.keys(lojasAP).length===0){
+        el.textContent='⏳ Carregando lojas do banco...';
+        await _carregarLojas();
+      }
+      const rows=await _readFile(file);
+      // Mantém no relatório apenas as propostas Aprovadas
+      const aprovadas=rows.map(_normalizeRow).filter(r=>r.STATUS==='Aprovada').map(_enrichRow);
+      if(!aprovadas.length){
+        el.textContent='⚠️ Nenhuma aprovada no arquivo';
+        showToast('Nenhuma proposta aprovada encontrada no arquivo','info');
+        document.getElementById('card-propostas-ap').classList.remove('active');
+        return;
+      }
+      // Sem loja, gcm e coordenador vinculados não entram na tabela
+      const comVinculo=aprovadas.filter(r=>(r.LOJA&&r.LOJA.trim())||(r.GCM&&r.GCM.trim())||(r.COORDENADOR&&r.COORDENADOR.trim()));
+      // Upsert SEM enviar observacao/pgto — preserva o que já estava salvo para propostas existentes;
+      // o histórico anterior nunca é apagado, só recebe as novas aprovadas.
+      const payload=comVinculo.map(r=>({id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,regional:r.REGIONAL||null,executivo:r.EXECUTIVO||null,status:r.STATUS||null}));
+      const loteSize=500;
+      for(let i=0;i<payload.length;i+=loteSize){
+        const lote=payload.slice(i,i+loteSize);
+        await SB.post('propostas_aprovadas?on_conflict=id_proposta',lote,'resolution=merge-duplicates,return=minimal');
+      }
+      // Remove do banco linhas sem loja, gcm e coordenador vinculados
+      await _limparSemVinculo();
+      el.textContent=`✅ ${comVinculo.length} aprovadas processadas`;
+      showToast(`${comVinculo.length} propostas aprovadas importadas! Histórico anterior mantido.`,'success');
+      await _carregarDoSupabase(true);
+    }catch(err){el.textContent='❌ Erro';showToast('Erro: '+err.message,'error');}
+    document.getElementById('card-propostas-ap').classList.remove('active');
+  }
+
+  async function _limparSemVinculo(){
+    try{ await SB.del('propostas_aprovadas?loja=is.null&gcm=is.null&coordenador=is.null'); }
+    catch(e){console.warn('Erro ao limpar sem vínculo (AP):',e);}
+  }
+
+  function _refreshSelects(){
+    const gcmSel=document.getElementById('ap-gcm-select');
+    const coordSel=document.getElementById('ap-coord-select');
+    const gcms=[...new Set(propostasAP.map(r=>r.GCM).filter(Boolean))].sort();
+    const coords=[...new Set(propostasAP.map(r=>r.COORDENADOR).filter(Boolean))].sort();
+    const gAtual=gcmSel.value, cAtual=coordSel.value;
+    gcmSel.innerHTML='<option value="">Todos</option>'+gcms.map(g=>`<option value="${_e(g)}">${_e(g)}</option>`).join('');
+    coordSel.innerHTML='<option value="">Todos</option>'+coords.map(c=>`<option value="${_e(c)}">${_e(c)}</option>`).join('');
+    gcmSel.value=gAtual; coordSel.value=cAtual;
+  }
+
+  function renderTable(){
+    const gf=document.getElementById('ap-gcm-select').value;
+    const cf=document.getElementById('ap-coord-select').value;
+    let rows=[...propostasAP];
+    if(currentFilterAP==='pago')rows=rows.filter(r=>r._pgto);
+    else if(currentFilterAP==='naopago')rows=rows.filter(r=>!r._pgto);
+    if(gf)rows=rows.filter(r=>r.GCM===gf);
+    if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
+    if(somenteFilialAP)rows=rows.filter(r=>r.GCM&&r.GCM.trim()!=='');
+    rows.sort((a,b)=>{let va=a[sortFieldAP]||'',vb=b[sortFieldAP]||'';if(sortFieldAP==='DATA_INCLUSAO'){va=new Date(va);vb=new Date(vb);}else{va=String(va).toLowerCase();vb=String(vb).toLowerCase();}return va<vb?-sortDirAP:va>vb?sortDirAP:0;});
+    const semVinculo=propostasAP.filter(r=>!r.GCM||r.GCM.trim()==='').length;
+    const pagas=propostasAP.filter(r=>r._pgto).length;
+    const naoPagas=propostasAP.length-pagas;
+    document.getElementById('ap-pill-total').textContent=rows.length+' total';
+    document.getElementById('ap-pill-pagas').textContent=pagas+' pagas';
+    document.getElementById('ap-pill-naopagas').textContent=naoPagas+' não pagas';
+    document.getElementById('ap-pill-sem').textContent=semVinculo+' sem vínculo';
+    const tbody=document.getElementById('table-body-ap');
+    if(!rows.length){tbody.innerHTML=`<tr><td colspan="10"><div class="empty-state"><div class="empty-icon">🔍</div><h3>Nenhum resultado</h3><p>Tente alterar os filtros</p></div></td></tr>`;return;}
+    tbody.innerHTML=rows.map(r=>{
+      const idx=propostasAP.findIndex(p=>p.ID_PROPOSTA&&p.ID_PROPOSTA===r.ID_PROPOSTA?true:p.PROPOSTA===r.PROPOSTA&&p.VENDEDOR===r.VENDEDOR&&p.DATA_INCLUSAO===r.DATA_INCLUSAO);
+      const badge=`<span class="badge badge-approved">✓ Aprovada</span>`;
+      return`<tr class="row-approved"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><textarea class="obs-input" rows="1" placeholder="Digite suas observações..." data-idx="${idx}" onchange="AppAP.updateObs(this)">${_e(r._obs||'')}</textarea></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
+    }).join('');
+  }
+
+  function _e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function _fmt(d){if(!d)return'';const dt=new Date(d);if(isNaN(dt))return String(d).replace('T',' ').substring(0,16);return dt.toLocaleDateString('pt-BR')+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+
+  function setFilter(f){
+    currentFilterAP=f;
+    document.querySelectorAll('#main-ap .filter-btn').forEach(b=>b.classList.remove('active'));
+    const ids={todas:'ap-filtro-todas',naopago:'ap-filtro-naopago',pago:'ap-filtro-pago'};
+    document.getElementById(ids[f])?.classList.add('active');
+    renderTable();
+  }
+  function sortBy(f){sortDirAP=sortFieldAP===f?-sortDirAP:1;sortFieldAP=f;renderTable();}
+  function toggleFilial(btn){somenteFilialAP=!somenteFilialAP;btn.classList.toggle('active',somenteFilialAP);renderTable();}
+
+  function updateObs(el){
+    const idx=parseInt(el.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
+    propostasAP[idx]._obs=el.value;
+    clearTimeout(_debounceTimerAP);
+    _debounceTimerAP=setTimeout(()=>_salvarLinha(propostasAP[idx]),1500);
+  }
+  function togglePgto(btn){
+    const idx=parseInt(btn.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
+    propostasAP[idx]._pgto=!propostasAP[idx]._pgto;
+    btn.classList.toggle('paid');btn.textContent=propostasAP[idx]._pgto?'💰':'💵';
+    renderTable();
+    _salvarLinha(propostasAP[idx]);
+  }
+  async function _salvarLinha(r){
+    const temVinculo=(r.LOJA&&r.LOJA.trim())||(r.GCM&&r.GCM.trim())||(r.COORDENADOR&&r.COORDENADOR.trim());
+    if(!temVinculo)return;
+    try{
+      await SB.post(
+        'propostas_aprovadas?on_conflict=id_proposta',
+        [{id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||'Aprovada',observacao:r._obs||null,pgto:r._pgto||false}],
+        'resolution=merge-duplicates,return=minimal'
+      );
+      showToast('💾 Salvo!','success');
+    }catch(e){showToast('Erro ao salvar','error');}
+  }
+
+  function exportCSV(){
+    const gf=document.getElementById('ap-gcm-select').value,cf=document.getElementById('ap-coord-select').value;
+    let rows=[...propostasAP];
+    if(currentFilterAP==='pago')rows=rows.filter(r=>r._pgto);
+    else if(currentFilterAP==='naopago')rows=rows.filter(r=>!r._pgto);
+    if(gf)rows=rows.filter(r=>r.GCM===gf);if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
+    const h=['Nome','Proposta','Data','Status','DN','Loja','GCM','Coordenador','Observação','Pgto'];
+    const csv=[h.join(';'),...rows.map(r=>[r.VENDEDOR,r.PROPOSTA,r.DATA_INCLUSAO,r.STATUS,r.DN,r.LOJA,r.GCM,r.COORDENADOR,(r._obs||'').replace(/;/g,','),r._pgto?'Sim':'Não'].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(';'))].join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`aprovadas_nao_pagas_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+    showToast('CSV exportado!','success');
+  }
+
+  return{init,abrirTela,voltarPrincipal,handleUpload,renderTable,setFilter,sortBy,toggleFilial,updateObs,togglePgto,exportCSV};
 })();
 
 // ════════════════════════════════════════════════
