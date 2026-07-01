@@ -66,6 +66,16 @@ header #header-date{font-size:12px;color:rgba(255,255,255,.55);display:block}
 #ap-table tr.row-pago .obs-input::placeholder{color:rgba(255,255,255,.7)}
 #ap-table tr.row-pago .btn-pgto.paid{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6)}
 
+/* Linha perdida (vermelho claro) / negociando (amarelo) — conforme observação selecionada */
+#ap-table tr.row-perdido{background:#fee2e2}
+#ap-table tr.row-negociando{background:#fef9c3}
+
+/* Lista suspensa de observação (só na tela AP) */
+.obs-select{width:100%;border:1px solid var(--gray-200);border-radius:6px;padding:5px 9px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--gray-700);background:var(--gray-50);transition:all .2s;min-width:160px;cursor:pointer}
+.obs-select:focus{outline:none;border-color:var(--green-main);background:#fff;box-shadow:0 0 0 3px rgba(34,164,93,.1)}
+#ap-table tr.row-pago .obs-select{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
+#ap-table tr.row-pago .obs-select option{color:#111}
+
 /* ── MAIN ── */
 main{padding:24px 28px;max-width:1700px;margin:0 auto}
 .upload-panel{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
@@ -1673,6 +1683,10 @@ const AppAP = (() => {
     gcmSel.value=gAtual; coordSel.value=cAtual;
   }
 
+  const OBS_OPCOES=['Perdemos por taxa','Quebra de crédito','Cliente desistiu','Aguard. documento','Negociando'];
+  const OBS_VERMELHO=['Perdemos por taxa','Quebra de crédito','Cliente desistiu'];
+  const OBS_AMARELO=['Aguard. documento','Negociando'];
+
   function renderTable(){
     const gf=document.getElementById('ap-gcm-select').value;
     const cf=document.getElementById('ap-coord-select').value;
@@ -1695,8 +1709,12 @@ const AppAP = (() => {
     tbody.innerHTML=rows.map(r=>{
       const idx=propostasAP.findIndex(p=>p.ID_PROPOSTA&&p.ID_PROPOSTA===r.ID_PROPOSTA?true:p.PROPOSTA===r.PROPOSTA&&p.VENDEDOR===r.VENDEDOR&&p.DATA_INCLUSAO===r.DATA_INCLUSAO);
       const badge=`<span class="badge badge-approved">✓ Aprovada</span>`;
-      const rowClass=r._pgto?'row-pago':'row-approved';
-      return`<tr class="${rowClass}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><textarea class="obs-input" rows="1" placeholder="Digite suas observações..." data-idx="${idx}" onchange="AppAP.updateObs(this)">${_e(r._obs||'')}</textarea></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
+      let rowClass='row-approved';
+      if(r._pgto)rowClass='row-pago';
+      else if(OBS_VERMELHO.includes(r._obs))rowClass='row-perdido';
+      else if(OBS_AMARELO.includes(r._obs))rowClass='row-negociando';
+      const opcoesHtml=`<option value="" ${!r._obs?'selected':''}>Selecione...</option>`+OBS_OPCOES.map(o=>`<option value="${_e(o)}" ${r._obs===o?'selected':''}>${_e(o)}</option>`).join('');
+      return`<tr class="${rowClass}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><select class="obs-select" data-idx="${idx}" onchange="AppAP.updateObs(this)">${opcoesHtml}</select></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
     }).join('');
   }
 
@@ -1716,8 +1734,8 @@ const AppAP = (() => {
   function updateObs(el){
     const idx=parseInt(el.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
     propostasAP[idx]._obs=el.value;
-    clearTimeout(_debounceTimerAP);
-    _debounceTimerAP=setTimeout(()=>_salvarLinha(propostasAP[idx]),1500);
+    renderTable();
+    _salvarLinha(propostasAP[idx]);
   }
   function togglePgto(btn){
     const idx=parseInt(btn.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
