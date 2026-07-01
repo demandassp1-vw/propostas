@@ -49,6 +49,23 @@ header #header-date{font-size:12px;color:rgba(255,255,255,.55);display:block}
 .btn-ap-toggle.btn-voltar{background:rgba(255,255,255,.15);color:#fff}
 .btn-ap-toggle.btn-voltar:hover{background:rgba(255,255,255,.25)}
 
+/* Tela "Aprovadas e Não Pagas" — cabeçalhos em preto para diferenciar da tela principal */
+#main-header.ap-mode{background:#111}
+#ap-table thead{background:#111}
+
+/* Linha paga — azul com fonte branca em toda a linha */
+#ap-table tr.row-pago{background:#2563eb}
+#ap-table tr.row-pago td{color:#fff}
+#ap-table tr.row-pago td.col-name,
+#ap-table tr.row-pago td.col-proposta,
+#ap-table tr.row-pago td.col-data,
+#ap-table tr.row-pago td.col-loja,
+#ap-table tr.row-pago td.col-gcm,
+#ap-table tr.row-pago td.col-coord{color:#fff}
+#ap-table tr.row-pago .obs-input{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
+#ap-table tr.row-pago .obs-input::placeholder{color:rgba(255,255,255,.7)}
+#ap-table tr.row-pago .btn-pgto.paid{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.6)}
+
 /* ── MAIN ── */
 main{padding:24px 28px;max-width:1700px;margin:0 auto}
 .upload-panel{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
@@ -187,7 +204,7 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
 <!-- ═══ APP (oculto até login) ═══ -->
 <div id="app-screen" style="display:none">
 
-<header>
+<header id="main-header">
   <div class="header-left">
     <div class="logo">📊</div>
     <div>
@@ -423,6 +440,13 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
         <span class="upload-meta-sm" id="ultima-atualizacao-ap"></span>
       </div>
       <span class="upload-status-sm" id="status-propostas-ap"></span>
+    </div>
+    <div class="upload-card upload-card-compact" style="cursor:pointer;border-style:solid;border-color:var(--green-main);" onclick="AppAP.exportExcel()">
+      <span class="upload-icon-sm">📊</span>
+      <div class="upload-compact-info">
+        <span class="upload-title-sm">Baixar Excel</span>
+        <span class="upload-meta-sm">Relatório para o gestor</span>
+      </div>
     </div>
   </div>
 
@@ -1503,6 +1527,7 @@ const AppAP = (() => {
     document.getElementById('btn-ap').style.display='none';
     document.getElementById('btn-voltar-ap').style.display='inline-block';
     document.getElementById('header-title').textContent='Aprovadas e Não Pagas';
+    document.getElementById('main-header').classList.add('ap-mode');
     await _carregarLojas();
     await _carregarDoSupabase(true);
   }
@@ -1513,6 +1538,7 @@ const AppAP = (() => {
     document.getElementById('btn-voltar-ap').style.display='none';
     document.getElementById('btn-ap').style.display='inline-block';
     document.getElementById('header-title').textContent='Acompanhamento de Propostas';
+    document.getElementById('main-header').classList.remove('ap-mode');
   }
 
   async function _carregarLojas(){
@@ -1669,7 +1695,8 @@ const AppAP = (() => {
     tbody.innerHTML=rows.map(r=>{
       const idx=propostasAP.findIndex(p=>p.ID_PROPOSTA&&p.ID_PROPOSTA===r.ID_PROPOSTA?true:p.PROPOSTA===r.PROPOSTA&&p.VENDEDOR===r.VENDEDOR&&p.DATA_INCLUSAO===r.DATA_INCLUSAO);
       const badge=`<span class="badge badge-approved">✓ Aprovada</span>`;
-      return`<tr class="row-approved"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><textarea class="obs-input" rows="1" placeholder="Digite suas observações..." data-idx="${idx}" onchange="AppAP.updateObs(this)">${_e(r._obs||'')}</textarea></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
+      const rowClass=r._pgto?'row-pago':'row-approved';
+      return`<tr class="${rowClass}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><textarea class="obs-input" rows="1" placeholder="Digite suas observações..." data-idx="${idx}" onchange="AppAP.updateObs(this)">${_e(r._obs||'')}</textarea></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
     }).join('');
   }
 
@@ -1724,7 +1751,27 @@ const AppAP = (() => {
     showToast('CSV exportado!','success');
   }
 
-  return{init,abrirTela,voltarPrincipal,handleUpload,renderTable,setFilter,sortBy,toggleFilial,updateObs,togglePgto,exportCSV};
+  function exportExcel(){
+    const gf=document.getElementById('ap-gcm-select').value,cf=document.getElementById('ap-coord-select').value;
+    let rows=[...propostasAP];
+    if(currentFilterAP==='pago')rows=rows.filter(r=>r._pgto);
+    else if(currentFilterAP==='naopago')rows=rows.filter(r=>!r._pgto);
+    if(gf)rows=rows.filter(r=>r.GCM===gf);if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
+    if(!rows.length){showToast('Nenhum dado para exportar','info');return;}
+    const dados=rows.map(r=>({
+      'Nome':r.VENDEDOR||'', 'Proposta':r.PROPOSTA||'', 'Data':_fmt(r.DATA_INCLUSAO), 'Status':r.STATUS||'Aprovada',
+      'DN':r.DN||'', 'Loja':r.LOJA||'', 'GCM':r.GCM||'', 'Coordenador':r.COORDENADOR||'',
+      'Observação':r._obs||'', 'Pagamento':r._pgto?'Pago':'Não Pago',
+    }));
+    const ws=XLSX.utils.json_to_sheet(dados);
+    ws['!cols']=[{wch:20},{wch:14},{wch:16},{wch:12},{wch:8},{wch:28},{wch:20},{wch:22},{wch:32},{wch:12}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Aprovadas e Não Pagas');
+    XLSX.writeFile(wb,`aprovadas_nao_pagas_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('Excel baixado!','success');
+  }
+
+  return{init,abrirTela,voltarPrincipal,handleUpload,renderTable,setFilter,sortBy,toggleFilial,updateObs,togglePgto,exportCSV,exportExcel};
 })();
 
 // ════════════════════════════════════════════════
