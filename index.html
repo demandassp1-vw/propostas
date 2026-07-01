@@ -59,6 +59,14 @@ main{padding:24px 28px;max-width:1700px;margin:0 auto}
 .upload-status{margin-top:8px;font-size:12px;font-weight:600;color:var(--green-dark)}
 .admin-only{display:none}
 
+/* Card compacto — Relatório de Propostas */
+.upload-card-compact{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 18px;min-width:0}
+.upload-card-compact .upload-icon-sm{font-size:20px;line-height:1;flex-shrink:0}
+.upload-card-compact .upload-compact-info{display:flex;flex-direction:column;gap:1px;min-width:0}
+.upload-card-compact .upload-title-sm{font-size:13px;font-weight:600;color:var(--gray-900);white-space:nowrap}
+.upload-card-compact .upload-meta-sm{font-size:11px;color:var(--gray-500);white-space:nowrap}
+.upload-card-compact .upload-status-sm{font-size:11px;font-weight:600;color:var(--green-dark);white-space:nowrap;margin-left:4px}
+
 .filters-bar{background:var(--white);border-radius:var(--radius);padding:12px 18px;display:flex;align-items:center;gap:12px;margin-bottom:16px;box-shadow:var(--shadow-sm);flex-wrap:wrap}
 .filter-label{font-size:13px;font-weight:600;color:var(--gray-700);white-space:nowrap}
 .filter-btn{border:2px solid var(--gray-200);background:var(--white);border-radius:8px;padding:5px 14px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px}
@@ -304,25 +312,25 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
       <div class="upload-status" id="status-lojas"></div>
     </div>
 
-    <!-- Upload propostas — só coordenador/admin vê -->
-    <div class="upload-card" id="card-propostas">
+    <!-- Upload propostas — visível para todos os perfis, em formato compacto -->
+    <div class="upload-card upload-card-compact" id="card-propostas">
       <input type="file" id="file-propostas" accept=".xlsx,.xls,.csv" onchange="App.handleUploadPropostas(event)">
-      <span class="upload-icon">📄</span>
-      <h3>Relatório de Propostas</h3>
-      <p>CSV/Excel exportado do sistema de propostas</p>
-      <span class="file-hint">.csv · .xlsx · .xls</span>
-      <div class="upload-status" id="status-propostas"></div>
-      <div id="ultima-atualizacao" style="margin-top:6px;font-size:11px;color:var(--gray-500);"></div>
+      <span class="upload-icon-sm">📄</span>
+      <div class="upload-compact-info">
+        <span class="upload-title-sm">Relatório de Propostas</span>
+        <span class="upload-meta-sm" id="ultima-atualizacao"></span>
+      </div>
+      <span class="upload-status-sm" id="status-propostas"></span>
     </div>
 
-    <div class="upload-card upload-action" onclick="App.recarregarBanco()">
+    <div class="upload-card upload-action admin-only" onclick="App.recarregarBanco()">
       <span class="upload-icon">🔄</span>
       <h3>Recarregar</h3>
       <p>Buscar dados atualizados do banco</p>
       <span class="file-hint">Sincronizar agora</span>
     </div>
 
-    <div class="upload-card upload-action" onclick="App.exportCSV()">
+    <div class="upload-card upload-action admin-only" onclick="App.exportCSV()">
       <span class="upload-icon">⬇️</span>
       <h3>Exportar CSV</h3>
       <p>Baixar a tabela com filtros aplicados</p>
@@ -330,7 +338,7 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
     </div>
 
     <!-- Snapshot do dia — só gestor vê -->
-    <div class="upload-card" style="border-style:solid;border-color:#7c3aed;" onclick="App.tirarSnapshot()">
+    <div class="upload-card admin-only" style="border-style:solid;border-color:#7c3aed;" onclick="App.tirarSnapshot()">
       <span class="upload-icon">📸</span>
       <h3>Salvar Foto do Dia</h3>
       <p>Guarda uma cópia das propostas de hoje</p>
@@ -339,7 +347,7 @@ td.col-gcm,td.col-coord{font-size:12px;color:#475569}
     </div>
 
     <!-- Consultar histórico -->
-    <div class="upload-card" style="border-style:solid;border-color:#7c3aed;">
+    <div class="upload-card admin-only" style="border-style:solid;border-color:#7c3aed;">
       <span class="upload-icon">📅</span>
       <h3>Consultar Histórico</h3>
       <p>Ver propostas salvas de outro dia</p>
