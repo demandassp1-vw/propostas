@@ -76,6 +76,14 @@ header #header-date{font-size:12px;color:rgba(255,255,255,.55);display:block}
 #ap-table tr.row-pago .obs-select{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
 #ap-table tr.row-pago .obs-select option{color:#111}
 
+.obs-detalhe{width:100%;margin-top:4px;border:1px solid var(--gray-200);border-radius:6px;padding:4px 8px;font-size:11px;font-family:'DM Sans',sans-serif;color:var(--gray-700);background:var(--gray-50);transition:all .2s}
+.obs-detalhe::placeholder{color:#b0bec5}
+.obs-detalhe:focus{outline:none;border-color:var(--green-main);background:#fff;box-shadow:0 0 0 3px rgba(34,164,93,.1)}
+.obs-detalhe:disabled{background:var(--gray-100);color:var(--gray-400);cursor:not-allowed}
+#ap-table tr.row-pago .obs-detalhe{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)}
+#ap-table tr.row-pago .obs-detalhe::placeholder{color:rgba(255,255,255,.7)}
+#ap-table tr.row-pago .obs-detalhe:disabled{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+
 /* ── MAIN ── */
 main{padding:24px 28px;max-width:1700px;margin:0 auto}
 .upload-panel{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap}
@@ -1605,6 +1613,7 @@ const AppAP = (() => {
         GCM:          r.gcm||'',         COORDENADOR:r.coordenador||'',
         REGIONAL:     r.regional||'',    EXECUTIVO:r.executivo||'',
         STATUS:       r.status||'Aprovada', _obs:r.observacao||'',
+        _detalhe:     r.detalhe||'',
         _pgto:        r.pgto||false,     _sb_id:r.id,
         _updated_at:  r.updated_at||'',
       }));
@@ -1714,7 +1723,8 @@ const AppAP = (() => {
       else if(OBS_VERMELHO.includes(r._obs))rowClass='row-perdido';
       else if(OBS_AMARELO.includes(r._obs))rowClass='row-negociando';
       const opcoesHtml=`<option value="" ${!r._obs?'selected':''}>Selecione...</option>`+OBS_OPCOES.map(o=>`<option value="${_e(o)}" ${r._obs===o?'selected':''}>${_e(o)}</option>`).join('');
-      return`<tr class="${rowClass}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:180px"><select class="obs-select" data-idx="${idx}" onchange="AppAP.updateObs(this)">${opcoesHtml}</select></td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
+      const detalheHtml=`<input type="text" class="obs-detalhe" data-idx="${idx}" placeholder="Adicionar observação..." value="${_e(r._detalhe||'')}" onchange="AppAP.updateDetalhe(this)" ${!r._obs?'disabled':''}>`;
+      return`<tr class="${rowClass}"><td class="col-name">${_e(r.VENDEDOR)||'—'}</td><td class="col-proposta">${_e(r.PROPOSTA)||'—'}</td><td class="col-data">${_fmt(r.DATA_INCLUSAO)}</td><td>${badge}</td><td class="col-dn">${_e(r.DN)||'—'}</td><td class="col-loja">${_e(r.LOJA)||(r.DN?`<span style="color:#b0bec5;font-size:11px">DN ${r.DN}</span>`:'—')}</td><td class="col-gcm">${_e(r.GCM)||'—'}</td><td class="col-coord">${_e(r.COORDENADOR)||'—'}</td><td style="min-width:200px"><select class="obs-select" data-idx="${idx}" onchange="AppAP.updateObs(this)">${opcoesHtml}</select>${detalheHtml}</td><td><button class="btn-pgto${r._pgto?' paid':''}" data-idx="${idx}" onclick="AppAP.togglePgto(this)">${r._pgto?'💰':'💵'}</button></td></tr>`;
     }).join('');
   }
 
@@ -1734,7 +1744,13 @@ const AppAP = (() => {
   function updateObs(el){
     const idx=parseInt(el.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
     propostasAP[idx]._obs=el.value;
+    if(!el.value)propostasAP[idx]._detalhe=''; // limpa o detalhe se voltar para "Selecione..."
     renderTable();
+    _salvarLinha(propostasAP[idx]);
+  }
+  function updateDetalhe(el){
+    const idx=parseInt(el.dataset.idx);if(isNaN(idx)||!propostasAP[idx])return;
+    propostasAP[idx]._detalhe=el.value;
     _salvarLinha(propostasAP[idx]);
   }
   function togglePgto(btn){
@@ -1750,7 +1766,7 @@ const AppAP = (() => {
     try{
       await SB.post(
         'propostas_aprovadas?on_conflict=id_proposta',
-        [{id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||'Aprovada',observacao:r._obs||null,pgto:r._pgto||false}],
+        [{id_proposta:r.ID_PROPOSTA||null,proposta:r.PROPOSTA||null,vendedor:r.VENDEDOR||null,data_inclusao:r.DATA_INCLUSAO||null,dn:r.DN||null,loja:r.LOJA||null,gcm:r.GCM||null,coordenador:r.COORDENADOR||null,status:r.STATUS||'Aprovada',observacao:r._obs||null,detalhe:r._detalhe||null,pgto:r._pgto||false}],
         'resolution=merge-duplicates,return=minimal'
       );
       showToast('💾 Salvo!','success');
@@ -1763,8 +1779,8 @@ const AppAP = (() => {
     if(currentFilterAP==='pago')rows=rows.filter(r=>r._pgto);
     else if(currentFilterAP==='naopago')rows=rows.filter(r=>!r._pgto);
     if(gf)rows=rows.filter(r=>r.GCM===gf);if(cf)rows=rows.filter(r=>r.COORDENADOR===cf);
-    const h=['Nome','Proposta','Data','Status','DN','Loja','GCM','Coordenador','Observação','Pgto'];
-    const csv=[h.join(';'),...rows.map(r=>[r.VENDEDOR,r.PROPOSTA,r.DATA_INCLUSAO,r.STATUS,r.DN,r.LOJA,r.GCM,r.COORDENADOR,(r._obs||'').replace(/;/g,','),r._pgto?'Sim':'Não'].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(';'))].join('\n');
+    const h=['Nome','Proposta','Data','Status','DN','Loja','GCM','Coordenador','Observação','Detalhe','Pgto'];
+    const csv=[h.join(';'),...rows.map(r=>[r.VENDEDOR,r.PROPOSTA,r.DATA_INCLUSAO,r.STATUS,r.DN,r.LOJA,r.GCM,r.COORDENADOR,(r._obs||'').replace(/;/g,','),(r._detalhe||'').replace(/;/g,','),r._pgto?'Sim':'Não'].map(v=>`"${(v||'').toString().replace(/"/g,'""')}"`).join(';'))].join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));a.download=`aprovadas_nao_pagas_${new Date().toISOString().slice(0,10)}.csv`;a.click();
     showToast('CSV exportado!','success');
   }
@@ -1779,17 +1795,17 @@ const AppAP = (() => {
     const dados=rows.map(r=>({
       'Nome':r.VENDEDOR||'', 'Proposta':r.PROPOSTA||'', 'Data':_fmt(r.DATA_INCLUSAO), 'Status':r.STATUS||'Aprovada',
       'DN':r.DN||'', 'Loja':r.LOJA||'', 'GCM':r.GCM||'', 'Coordenador':r.COORDENADOR||'',
-      'Observação':r._obs||'', 'Pagamento':r._pgto?'Pago':'Não Pago',
+      'Observação':r._obs||'', 'Detalhe':r._detalhe||'', 'Pagamento':r._pgto?'Pago':'Não Pago',
     }));
     const ws=XLSX.utils.json_to_sheet(dados);
-    ws['!cols']=[{wch:20},{wch:14},{wch:16},{wch:12},{wch:8},{wch:28},{wch:20},{wch:22},{wch:32},{wch:12}];
+    ws['!cols']=[{wch:20},{wch:14},{wch:16},{wch:12},{wch:8},{wch:28},{wch:20},{wch:22},{wch:22},{wch:32},{wch:12}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,'Aprovadas e Não Pagas');
     XLSX.writeFile(wb,`aprovadas_nao_pagas_${new Date().toISOString().slice(0,10)}.xlsx`);
     showToast('Excel baixado!','success');
   }
 
-  return{init,abrirTela,voltarPrincipal,handleUpload,renderTable,setFilter,sortBy,toggleFilial,updateObs,togglePgto,exportCSV,exportExcel};
+  return{init,abrirTela,voltarPrincipal,handleUpload,renderTable,setFilter,sortBy,toggleFilial,updateObs,updateDetalhe,togglePgto,exportCSV,exportExcel};
 })();
 
 // ════════════════════════════════════════════════
